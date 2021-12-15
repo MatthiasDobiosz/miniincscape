@@ -1,12 +1,18 @@
+import math
 import sys
+import tkinter.filedialog
 from tkinter import *
+from tkinter.colorchooser import askcolor
 import numpy as np
 from numpy import matrix as M
 from math import sin, cos, pi
+import json
 
 newline = 0
+newcircle = 0
 lineID = 1
 line_points = []
+circle_points = []
 controlpoints = []
 endpoints = []
 lines = []
@@ -16,8 +22,7 @@ finalpoint = None
 finalspecialpoint = None
 hidden = False
 camerastartx = []
-
-sys.setrecursionlimit(1800)
+chosen_color = "black"
 
 
 class Scene:
@@ -26,7 +31,7 @@ class Scene:
     def transform(shape, matrix):
         ret = []
         for point in shape:
-            if len(point) == 2:
+            if len(point) == 2 or len(point) == 1:
                 point = list(point)
                 point.append(1)
             elif len(point) != 3:
@@ -56,10 +61,13 @@ class Scene:
         if curve:
             for p1, p2 in pairwise_wrap(shape):
                 con = (((control.p1 + control.p2) / 2), ((control.p3 + control.p4) / 2))
-                return bezier(map(int, p1), con, map(int, p2))
+                return bezier(map(int, p1), con, map(int, p2), color)
         else:
             for p1, p2 in pairwise_wrap(shape):
                 return naive_line(self.canvas, map(int, p1), map(int, p2), color)
+
+    def draw_circle(self, center, radius, color="black"):
+        return bezier_circle(center, radius)
 
     def render(self, single=None, curve=False):
         if single is not None:
@@ -70,6 +78,13 @@ class Scene:
 
     def is_selected(self, selected_point):
         self.selected = selected_point
+
+    def get_all(self):
+        objects = []
+        for node in self.root.children:
+            for child in node.children:
+                objects.append(child)
+        return objects
 
 
 class Node:
@@ -116,6 +131,15 @@ class Node:
         self.children = []
         for child in self.children:
             child.clear()
+
+    def delete_on_canvas(self):
+        for child in self.children:
+            child.delete()
+
+    def detranslate(self):
+        self.transform = M([[1, 0, 0],
+                            [0, 1, 0],
+                            [0, 0, 1]])
 
 
 class Shape:
@@ -199,6 +223,12 @@ class Shape:
         for line in self.path:
             line.clear()
 
+    def delete(self):
+        for line in self.path:
+            canvas.delete(line.endpoint.rect)
+            for rect in line.currentpixels:
+                canvas.delete(rect)
+
 
 class Point:
     def __init__(self, rect, p1, p2, p3, p4, point_type):
@@ -247,11 +277,20 @@ class Line:
 
     def apply(self, transform_matrix, curve=False):
         if curve:
-            attlist = self.scene.draw_shape(transform(self.path, transform_matrix), curve, self.controlpoint,
+            x = int(transform_matrix[0, 2])
+            y = int(transform_matrix[1, 2])
+            self.controlpoint.p1 = self.controlpoint.p1 + x
+            self.controlpoint.p2 = self.controlpoint.p2 + x
+            self.controlpoint.p3 = self.controlpoint.p3 + y
+            self.controlpoint.p4 = self.controlpoint.p4 + y
+            self.path = transform(self.path, transform_matrix)
+            attlist = self.scene.draw_shape(self.path, curve, self.controlpoint,
                                             self.color)
 
         else:
-            attlist = self.scene.draw_shape(transform(self.path, transform_matrix), False, None, self.color)
+            self.path = transform(self.path, transform_matrix)
+            attlist = self.scene.draw_shape(self.path, False, None, self.color)
+
         self.controlpoint = attlist[0]
         self.controlpoint.setParent([self])
         self.startpoint = attlist[1]
@@ -319,6 +358,51 @@ class Line:
         self.currentpixels = None
         self.line_type = None
 
+    def delete(self):
+        canvas.delete(self.endpoint.rect)
+        canvas.delete(self.startpoint.rect)
+        canvas.delete(self.controlpoint.rect)
+        for rect in self.currentpixels:
+            canvas.delete(rect)
+
+
+class Circle:
+    def __init__(self, scene, node, center, radius, color="black"):
+        self.scene = scene
+        self.node = node
+        self.center = center
+        self.radius = radius
+        self.color = color
+        self.curve = False
+        self.controlpoint = None
+        self.middlepoint = None
+        self.currentpixels = None
+
+    def apply(self, transform_matrix, curve):
+        attlist = self.scene.draw_circle(self.center, self.radius, self.color)
+        self.controlpoint = attlist[0]
+        self.controlpoint.setParent(self)
+        self.middlepoint = attlist[1]
+        self.middlepoint.setParent(self)
+        self.currentpixels = attlist[2]
+
+    def hide(self):
+        canvas.delete(self.middlepoint.rect)
+        self.middlepoint.dragable = False
+        canvas.delete(self.controlpoint.rect)
+        self.controlpoint.dragable = False
+
+    def show(self):
+        middlepoint = self.middlepoint
+        center = canvas.create_rectangle(middlepoint.p1, middlepoint.p2, middlepoint.p3, middlepoint.p4, fill="blue")
+        self.middlepoint.rect = center
+        self.middlepoint.dragable = True
+        controlpoint = self.controlpoint
+        control = canvas.create_rectangle(controlpoint.p1, controlpoint.p3, controlpoint.p2, controlpoint.p4,
+                                          fill="red")
+        self.controlpoint.rect = control
+        self.controlpoint.dragable = True
+
 
 def callback(event):
     global newline
@@ -326,7 +410,6 @@ def callback(event):
     global line_points
     global lines
     global polygonhelper
-
     if line_btn["bg"] == "green":
         if newline == 0:
             line_points.append((event.x, event.y))
@@ -334,7 +417,7 @@ def callback(event):
         else:
             t = Node(scene)
             scene.root.add_child(t)
-            new_line = Line(scene, ((line_points[0]), (event.x, event.y)), t, False)
+            new_line = Line(scene, ((line_points[0]), (event.x, event.y)), t, False, chosen_color)
             t.add_child(new_line)
             line_points = []
             scene.render(new_line)
@@ -346,6 +429,8 @@ def callback(event):
             scene.selected = None
     if pol_btn["bg"] == "green":
         if newpol == 0:
+            newline = 0
+            line_points = []
             scene.selected = None
             line_points.append((event.x, event.y))
             rect = canvas.create_rectangle(event.x - 5, event.y - 5, event.x + 5, event.y + 5, outline="green")
@@ -354,7 +439,8 @@ def callback(event):
         else:
             # t = Node(scene)
             scene.selected = None
-            new_polline = Line(scene, ((line_points[len(line_points) - 1]), (event.x, event.y)), None, False)
+            new_polline = Line(scene, ((line_points[len(line_points) - 1]), (event.x, event.y)), None, False,
+                               chosen_color)
             rect = canvas.create_rectangle(event.x - 3, event.y - 3, event.x + 3, event.y + 3, outline="orange")
             polygonhelper.append(rect)
             lines.append(new_polline)
@@ -490,6 +576,84 @@ def on_drag(event):
                 #    canvas.delete(rect)
 
 
+def circle_callback(event):
+    global newcircle
+    global circle_points
+    if isControlPoint(event.x, event.y) != 0:
+        scene.selected = isControlPoint(event.x, event.y)
+        canvas.startxy = (event.x, event.y)
+    elif isCenterPoint(event.x, event.y) != 0:
+        scene.selected = isCenterPoint(event.x, event.y)
+        canvas.startxy = (event.x, event.y)
+    else:
+        if newcircle == 0:
+            circle_points.append((event.x, event.y))
+            newcircle = newcircle + 1
+        else:
+            circle_points.append((event.x, event.y))
+            radius = ((((circle_points[1][0] - circle_points[0][0]) ** 2) + (
+                    (circle_points[1][1] - circle_points[0][1]) ** 2)) ** 0.5)
+            t = Node(scene)
+            scene.root.add_child(t)
+            new_circle = Circle(scene, t, circle_points[0], radius)
+            t.add_child(new_circle)
+            newcircle = 0
+            circle_points = []
+            scene.render(new_circle)
+
+
+def circle_drag(event):
+    if scene.selected:
+        if type(scene.selected) is Point:
+            if scene.selected.point_type == "controlpoint":
+                dx, dy = event.x - canvas.startxy[0], event.y - canvas.startxy[1]
+                circle = scene.selected.parent
+                scene.selected.setp1(scene.selected.p1 + dx)
+                scene.selected.setp2(scene.selected.p2 + dx)
+                scene.selected.setp3(scene.selected.p3 + dy)
+                scene.selected.setp4(scene.selected.p4 + dy)
+                circle.radius = ((((circle.middlepoint.p1 + 5 - scene.selected.p1 + 5) ** 2) + (
+                        (circle.middlepoint.p2 + 5 - scene.selected.p3 + 5) ** 2)) ** 0.5)
+                rects = circle.currentpixels
+                for rect in rects:
+                    canvas.delete(rect)
+                canvas.delete(circle.middlepoint.rect)
+                canvas.delete(circle.controlpoint.rect)
+                canvas.startxy = (event.x, event.y)
+                scene.render(circle)
+            if scene.selected.point_type == "centerpoint":
+                dx, dy = event.x - canvas.startxy[0], event.y - canvas.startxy[1]
+                circle = scene.selected.parent
+                scene.selected.setp1(scene.selected.p1 + dx)
+                scene.selected.setp2(scene.selected.p2 + dx)
+                scene.selected.setp3(scene.selected.p3 + dy)
+                scene.selected.setp4(scene.selected.p4 + dy)
+                circle.controlpoint.setp1(circle.controlpoint.p1 + dx)
+                circle.controlpoint.setp2(circle.controlpoint.p2 + dy)
+                circle.controlpoint.setp3(circle.controlpoint.p3 + dx)
+                circle.controlpoint.setp4(circle.controlpoint.p4 + dy)
+                circle.center = (circle.center[0] + dx, circle.center[1] + dy)
+                rects = circle.currentpixels
+                for rect in rects:
+                    canvas.delete(rect)
+                canvas.delete(circle.middlepoint.rect)
+                canvas.delete(circle.controlpoint.rect)
+                canvas.startxy = (event.x, event.y)
+                scene.render(circle)
+
+
+def isCenterPoint(x, y):
+    for node in scene.root.children:
+        for shape in node.children:
+            if type(shape) is Circle:
+                center = shape.middlepoint
+                if center.p3 >= x >= center.p1:
+                    if center.p4 >= y >= center.p2:
+                        if center.dragable:
+                            return center
+    return 0
+
+
 def isControlPoint(x, y):
     for node in scene.root.children:
         for shape in node.children:
@@ -526,7 +690,7 @@ def isEndPoint(x, y):
                         if endPoint.p4 >= y >= endPoint.p2:
                             if endPoint.dragable:
                                 return endPoint
-            else:
+            elif type(shape) is Line:
                 startPoint = shape.startpoint
                 endPoint = shape.endpoint
                 if startPoint.p3 >= x >= startPoint.p1:
@@ -540,7 +704,7 @@ def isEndPoint(x, y):
     return 0
 
 
-def naive_line(canvas2, p1, p2, color=255):
+def naive_line(canvas2, p1, p2, color):
     rects = []
     vertical = False
     x1, y1 = p1
@@ -564,7 +728,7 @@ def naive_line(canvas2, p1, p2, color=255):
         y = int(m * x + t)
         if vertical:
             x, y = y, x
-        pixel = canvas2.create_rectangle(x, y, x, y)
+        pixel = canvas2.create_rectangle(x, y, x, y, outline=color)
         rects.append(pixel)
     start = canvas.create_rectangle(_x1 - 3, _y1 - 3, _x1 + 3, _y1 + 3, fill="blue")
     end = canvas.create_rectangle(_x2 - 3, _y2 - 3, _x2 + 3, _y2 + 3, fill="blue")
@@ -577,7 +741,7 @@ def naive_line(canvas2, p1, p2, color=255):
     return attlist
 
 
-def bezier(p0, p1, p2):
+def bezier(p0, p1, p2, color):
     rects = []
     x0, y0 = p0
     x1, y1 = p1
@@ -590,7 +754,8 @@ def bezier(p0, p1, p2):
         p1_y = 2 * (1 - t) * t * y1
         p2_x = t ** 2 * x2
         p2_y = t ** 2 * y2
-        rect = canvas.create_rectangle(p0_x + p1_x + p2_x, p0_y + p1_y + p2_y, p0_x + p1_x + p2_x, p0_y + p1_y + p2_y)
+        rect = canvas.create_rectangle(p0_x + p1_x + p2_x, p0_y + p1_y + p2_y, p0_x + p1_x + p2_x, p0_y + p1_y + p2_y,
+                                       outline=color)
         rects.append(rect)
         t = t + 0.002
 
@@ -602,6 +767,45 @@ def bezier(p0, p1, p2):
     controlpoint = Point(control, x1 - 5, x1 + 5, y1 - 5, y1 + 5, "controlpoint")
     attlist = [controlpoint, startp, endp, rects, "curve"]
     return attlist
+
+
+def bezier_circle(p0, r):
+    rects = []
+    x0, y0 = p0
+    d = 3 - (2 * r)
+    x = 0
+    y = r
+    points = draw_circle(x0, y0, x, y)
+    for point in points:
+        rects.append(point)
+    while y >= x:
+        x = x + 1
+        if d > 0:
+            y = y - 1
+            d = d + 4 * (x - y) + 10
+        else:
+            d = d + 4 * x + 6
+        points = draw_circle(x0, y0, x, y)
+        for point in points:
+            rects.append(point)
+    controlp = canvas.create_rectangle(x0 - 5, (y0 - r) - 5, x0 + 5, (y0 - r) + 5, fill="red")
+    centerp = canvas.create_rectangle(x0 - 5, y0 - 5, x0 + 5, y0 + 5, fill="blue")
+    controlpoint = Point(controlp, x0 - 5, x0 + 5, (y0 - r) - 5, (y0 - r) + 5, "controlpoint")
+    centerpoint = Point(centerp, x0 - 5, y0 - 5, x0 + 5, y0 + 5, "centerpoint")
+    attlist = [controlpoint, centerpoint, rects]
+    return attlist
+
+
+def draw_circle(xc, yc, x, y):
+    rect1 = canvas.create_rectangle(xc + x, yc + y, xc + x, yc + y)
+    rect2 = canvas.create_rectangle(xc - x, yc + y, xc - x, yc + y)
+    rect3 = canvas.create_rectangle(xc + x, yc - y, xc + x, yc - y)
+    rect4 = canvas.create_rectangle(xc - x, yc - y, xc - x, yc - y)
+    rect5 = canvas.create_rectangle(xc + y, yc + x, xc + y, yc + x)
+    rect6 = canvas.create_rectangle(xc - y, yc + x, xc - y, yc + x)
+    rect7 = canvas.create_rectangle(xc + y, yc - x, xc + y, yc - x)
+    rect8 = canvas.create_rectangle(xc - y, yc - x, xc - y, yc - x)
+    return rect1, rect2, rect3, rect4, rect5, rect6, rect7, rect8
 
 
 def scanline_fill(polygon, px, py, color):
@@ -625,7 +829,6 @@ def scanline_fill(polygon, px, py, color):
 
         for i in range(7):
             for z in range(7):
-                print((line.endpoint.p1 + i, line.endpoint.p2 + z))
                 allcoords.append((line.endpoint.p1 + i, line.endpoint.p2 + z))
 
     toFill = set()
@@ -698,12 +901,19 @@ def set_startxy(event):
 
 
 def move_canvas(event):
-    print("move")
+    global camerastartx
     dx, dy = event.x - camerastartx[0], event.y - camerastartx[1]
     for node in scene.root.children:
         node.translate(dx, dy)
+        node.delete_on_canvas()
+        for child in node.children:
+            if type(child) is Shape:
+                for line in child.path:
+                    line.rendered = False
+            scene.render(child)
+        node.detranslate()
 
-
+    camerastartx = (event.x, event.y)
 
 
 def new_polygon(pol_lines):
@@ -719,6 +929,29 @@ def changeToPolygon():
         line_btn["bg"] = "white"
     else:
         pol_btn["bg"] = "white"
+
+
+def change_color():
+    global chosen_color
+    colors = askcolor(title="Tkinter Color Chooser")
+    chosen_color = colors[1]
+
+
+def save_scene():
+    filesaver = tkinter.filedialog.asksaveasfile(filetypes=[('Text Documents', '*txt')], defaultextension=".txt")
+    save_json(filesaver)
+
+
+def save_json(file):
+    with open(file.name, 'w') as f:
+        for item in scene.get_all():
+            if type(item) is Line:
+                print(json.dumps({
+                    'type': "line",
+                    'path': item.path,
+                    'curve': item.curve,
+                    'color': item.color,
+                }), file=file)
 
 
 def translate(tx, ty, p=None):
@@ -792,12 +1025,20 @@ line_btn = Button(root, text="Linie", width=10, height=2, bg="white", command=ch
 line_btn.place(x=450, y=70)
 pol_btn = Button(root, text="Polygon", width=10, height=2, bg="white", command=changeToPolygon)
 pol_btn.place(x=550, y=70)
+color_btn = Button(root, text="color", width=10, height=2, command=change_color)
+color_btn.place(x=500, y=150)
+save_btn = Button(root, text="save", width=10, height=2, command=lambda: save_scene())
+save_btn.place(x=450, y=230)
+# load_btn = Button(root, text="load", width=10, height=2, command=load_scene)
+# load_btn.place(x=550, y=230)
 canvas.bind("<B1-Motion>", on_drag)
 canvas.bind("<Button-1>", callback)
 canvas.master.bind("x", point_state)
 canvas.master.bind("c", clear_canvas)
 canvas.bind("<B2-Motion>", move_canvas)
 canvas.bind("<Button-2>", set_startxy)
+canvas.bind("<Button-3>", circle_callback)
+canvas.bind("<B3-Motion>", circle_drag)
 
 scene = Scene()
 scene.root = Node(scene)
