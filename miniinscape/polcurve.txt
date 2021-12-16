@@ -1,0 +1,4 @@
+{"type": "polyline", "id": 0, "path": [[646.0, 265.0], [386.0, 427.0]], "curve": true, "color": "black", "number_lines": 4}
+{"type": "polyline", "id": 0, "path": [[386.0, 427.0], [608.0, 579.0]], "curve": false, "color": "black", "number_lines": 4}
+{"type": "polyline", "id": 0, "path": [[608.0, 579.0], [839.0, 452.0]], "curve": true, "color": "black", "number_lines": 4}
+{"type": "polyline", "id": 0, "path": [[839.0, 452.0], [646.0, 265.0]], "curve": false, "color": "black", "number_lines": 4}

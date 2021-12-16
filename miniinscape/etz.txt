@@ -1,0 +1,4 @@
+{"type": "polyline", "id": 0, "path": [[695.0, 226.0], [445.0, 430.0]], "curve": false, "color": "black", "number_lines": 4, "control": [565.0, 575.0, 323.0, 333.0], "fill": true, "fillcolor": "#e06164", "fillpoint": [742, 348]}
+{"type": "polyline", "id": 0, "path": [[445.0, 430.0], [809.0, 413.0]], "curve": false, "color": "black", "number_lines": 4, "control": [622.0, 632.0, 416.5, 426.5], "fill": true, "fillcolor": "#e06164", "fillpoint": [742, 348]}
+{"type": "polyline", "id": 0, "path": [[809.0, 413.0], [820.0, 241.0]], "curve": false, "color": "black", "number_lines": 4, "control": [809.5, 819.5, 322.0, 332.0], "fill": true, "fillcolor": "#e06164", "fillpoint": [742, 348]}
+{"type": "polyline", "id": 0, "path": [[820.0, 241.0], [695.0, 226.0]], "curve": false, "color": "black", "number_lines": 4, "control": [752.5, 762.5, 228.5, 238.5], "fill": true, "fillcolor": "#e06164", "fillpoint": [742, 348]}

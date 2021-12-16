@@ -1,0 +1,9 @@
+{"type": "polyline", "id": 0, "path": [[694.0, 244.0], [299.0, 538.0]], "curve": false, "color": "black", "number_lines": 4, "control": [491.5, 501.5, 386.0, 396.0]}
+{"type": "polyline", "id": 0, "path": [[299.0, 538.0], [669.0, 736.0]], "curve": false, "color": "black", "number_lines": 4, "control": [479.0, 489.0, 632.0, 642.0]}
+{"type": "polyline", "id": 0, "path": [[669.0, 736.0], [992.0, 350.0]], "curve": false, "color": "black", "number_lines": 4, "control": [825.5, 835.5, 538.0, 548.0]}
+{"type": "polyline", "id": 0, "path": [[992.0, 350.0], [694.0, 244.0]], "curve": false, "color": "black", "number_lines": 4, "control": [838.0, 848.0, 292.0, 302.0]}
+{"type": "polyline", "id": 1, "path": [[416.0, 126.0], [319.0, 273.0]], "curve": false, "color": "black", "number_lines": 5, "control": [362.5, 372.5, 194.5, 204.5]}
+{"type": "polyline", "id": 1, "path": [[319.0, 273.0], [528.0, 304.0]], "curve": false, "color": "black", "number_lines": 5, "control": [418.5, 428.5, 283.5, 293.5]}
+{"type": "polyline", "id": 1, "path": [[528.0, 304.0], [582.0, 130.0]], "curve": false, "color": "black", "number_lines": 5, "control": [550.0, 560.0, 212.0, 222.0]}
+{"type": "polyline", "id": 1, "path": [[582.0, 130.0], [421.0, 124.0]], "curve": false, "color": "black", "number_lines": 5, "control": [496.5, 506.5, 122.0, 132.0]}
+{"type": "polyline", "id": 1, "path": [[421.0, 124.0], [416.0, 126.0]], "curve": false, "color": "black", "number_lines": 5, "control": [413.5, 423.5, 120.0, 130.0]}

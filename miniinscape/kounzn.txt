@@ -1,0 +1,7 @@
+{"type": "line", "path": [[238.0, 104.0], [98.0, 271.0]], "curve": false, "color": "black", "control": [163.0, 173.0, 182.5, 192.5]}
+{"type": "circle", "center": [468, 402], "radius": 181.63975335812367, "color": "#cd74bd"}
+{"type": "polyline", "id": 2, "path": [[143.0, 361.0], [133.0, 489.0]], "curve": false, "color": "#ff4242", "number_lines": 4}
+{"type": "polyline", "id": 2, "path": [[133.0, 489.0], [317.0, 500.0]], "curve": false, "color": "#ff4242", "number_lines": 4}
+{"type": "polyline", "id": 2, "path": [[317.0, 500.0], [340.0, 65.0]], "curve": false, "color": "#ff4242", "number_lines": 4}
+{"type": "polyline", "id": 2, "path": [[340.0, 65.0], [143.0, 361.0]], "curve": false, "color": "#ff4242", "number_lines": 4}
+{"type": "line", "path": [[84.0, 105.0], [565.0, 446.0]], "curve": false, "color": "#6977d8", "control": [319.5, 329.5, 270.5, 280.5]}
